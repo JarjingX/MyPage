@@ -1,0 +1,228 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Travel Log</title>
+    <script type="text/javascript" src="d3/d3.js"></script>
+    <script type="text/javascript" src="jquery/jquery.js"></script>
+    <style>
+        div.province {
+            width: 240px;
+            height: 40px;
+            margin: 4px;
+            margin-top: 20px;
+            text-align: center;
+            line-height: 40px;
+            background-color: white;
+            border: 4px solid #ffbb00;
+        }
+        div.city {
+            width: 200px;
+            height: 30px;
+            margin: 4px;
+            margin-left: 25px;
+            text-align: center;
+            line-height: 30px;
+            background-color: white;
+            border: 2px solid #ffbb00;
+        }
+        div.footer {
+            height: 60px;
+            line-height: 60px;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            background: #333;
+            color: #fff;
+            font-family: Arial;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+        div.block {
+            position: absolute;
+            top: 160px;
+            padding-bottom: 200px;
+        }
+        div.head {
+            height: 80px;
+            line-height: 80px;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            text-align: center;
+            background: #7cbb00;
+            color: #fff;
+            font-family: Arial;
+            font-size: 40px;
+            letter-spacing: 1px;
+            z-index: 9999;
+        }
+        div.script {
+            height: 40px;
+            line-height: 40px;
+            position: fixed;
+            top: 80px;
+            width: 100%;
+            background: #00a1f1;
+            color: #fff;
+            padding-left: 10px;
+            font-family: 'Microsoft YaHei';
+            z-index: 9999;
+        }
+        svg {
+            position: fixed;
+            top: 140px;
+            width: 100%;
+            height: 2000px;
+            padding-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="head">Travel Log</div>
+    <div class="script">使用说明：轻点地图隐藏选项框，再次点击地图召回选项框</div>
+    <svg></svg>
+    <div class="block"></div>
+
+    <script type="text/javascript">
+        var window_height = window.innerHeight - 240;
+        var window_width = window.innerWidth - 40;
+        var province = [];
+        var province_city = [];
+        var count = 0;
+        var provinceCode = [11, 12, 13, 14, 15, 21, 22, 23, 31, 32, 33, 34, 35, 36, 37, 41, 42, 43, 44, 45, 46, 50, 51, 52, 53, 54, 61, 62, 63, 64, 65, 71, 81, 82];
+        function drawMap() {
+            var projection = d3.geoMercator();
+            var path;
+
+            // 绘制地图
+            var svg = d3.select("body").select("svg");
+            d3.json("mapdata/china2.json", function (china) {
+                projection.fitSize([window_width, window_height], china);
+                path = d3.geoPath().projection(projection);
+                // 绘制市辖区轮廓图
+                for (var i in provinceCode) {
+                    province_city[provinceCode[i]] = [];
+                    d3.json("mapdata/geometryProvince/" + provinceCode[i] + ".json", function (json) {
+                        svg.selectAll("path.city")
+                            .data(json.features)
+                            .enter()
+                            .append("path")
+                            .attr("d", path)
+                            .attr("fill", "transparent")
+                            .attr("stroke", "black")
+                            .attr("stroke-width", 0.2)
+                            .attr("stroke-dasharray", "3,3")
+                            .attr("title", function (d) {
+                                return d.properties.id.substr(0, 2);
+                            })
+                            .attr("name", function (d) {
+                                province_city[parseInt(d.properties.id.substr(0, 2))].push(d.properties.name);
+                                return d.properties.name;
+                            });
+                        count++;
+                        // 市辖区轮廓图绘制完毕后，绘制选择框
+                        if (count == 34) {
+                            svg.selectAll("path.province")
+                                .data(china.features)
+                                .enter()
+                                .append("path")
+                                .attr("d", path)
+                                .attr("class", "province")
+                                .attr("fill", "transparent")
+                                .attr("stroke", "black")
+                                .attr("stroke-width", 1)
+                                .attr("name", function (d) {
+                                    province[parseInt(d.properties.id)] = d.properties.name;
+                                    return d.properties.name;
+                                });
+                        drawButton();
+                        }
+                    });
+                }
+            });
+        }
+
+        function drawButton() {
+            for (var i in provinceCode) {
+                d3.select("body").select("div.block")
+                    .append("div")
+                    .attr("class", "province")
+                    .attr("name", province[provinceCode[i]])
+                    .attr("id", provinceCode[i])
+                    .text(province[provinceCode[i]]);
+                d3.select("body").select("div.block").selectAll("div.cities")
+                    .data(province_city[provinceCode[i]])
+                    .enter()
+                    .append("div")
+                    .attr("class", "city")
+                    .attr("title", provinceCode[i])
+                    .text(function (d) { return d })
+                    .attr("name", function (d) { return d });
+            }
+            control();
+        }
+        drawMap();
+    </script>
+    
+    <script>
+        // 描述关联逻辑
+        function control() {
+            var cities;
+            var bool = true;
+            $(document).ready(function () {
+                $("svg").click(function () {
+                    if (bool) {
+                        $("div.block").hide();
+                        bool = false;
+                    }
+                    else {
+                        $("div.block").show();
+                        bool = true;
+                    }
+                });
+                $("div.province").data("on", false);
+                $("div.city").data("on", false);
+                $("div.province").click(function () {
+                    if ($(this).data("on") == false) {
+                        $(this).css({ "background-color": "#ffbb00", "color": "white" });
+                        $(this).data("on", true);
+                        cities = $("div[title=" + $(this).attr("id") + "]");
+                        cities.css({ "background-color": "#ffbb00", "color": "white" });
+                        cities.data("on", true);
+                        $("path[title=" + $(this).attr("id") + "]").attr("fill", "#00a1f1");
+                        if(cities.length < 1)
+                            $("path[name=" + $(this).attr("name") + "]").attr("fill", "#00a1f1");
+                    }
+                    else {
+                        $(this).css({ "background-color": "white", "color": "black" });
+                        $(this).data("on", false);
+                        cities = $("div[title=" + $(this).attr("id") + "]");
+                        cities.css({ "background-color": "white", "color": "black" });
+                        cities.data("on", false);
+                        $("path[title=" + $(this).attr("id") + "]").attr("fill", "transparent");
+                        $("path[name=" + $(this).attr("name") + "]").attr("fill", "transparent");
+                    }
+                });
+                $("div.city").click(function () {
+                    if ($(this).data("on") == false) {
+                        $(this).css({ "background-color": "#ffbb00", "color": "white" });
+                        $("path[name=" + $(this).attr("name") + "]").attr("fill", "#00a1f1");
+                        $(this).data("on", true);
+                    }
+                    else {
+                        $(this).css({ "background-color": "white", "color": "black" });
+                        $("path[name=" + $(this).attr("name") + "]").attr("fill", "transparent");
+                        $(this).data("on", false);
+                    }
+                });
+            });
+        }
+        
+    </script>
+
+    <div class="footer">by - 烧卖 JarjingX</div>
+    
+</body>
+</html>
