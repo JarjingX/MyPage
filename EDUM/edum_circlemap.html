@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>EDUM</title>
+    <script type="text/javascript" src="d3/d3.js"></script>
+    <script type="text/javascript" src="jquery/jquery.js"></script>
+</head>
+<body>
+    <svg width="700" height="800">
+        <image xlink:href="tsinghua.png" width="700" height="800" x="0" y="0" />
+    </svg>
+    <h3>
+
+    </h3>
+    <h3 style="color:red">
+        单击地图，切换下一个时间点
+    </h3>
+    <script>
+        var projection = d3.geoMercator().center([116.3200819, 40.0026086]).translate([348, 358]).scale([1610000]);
+        var x, y, r;
+        // 主楼：40.00063489  116.3263251
+        // 图书馆：40.00355714  116.3190488
+        // 美术学院：39.99834189  116.3299731
+        /*
+        此处代码用于标定投影函数projection的偏移量和缩放量
+        [x, y] = projection([116.3263251, 40.00063489]);
+        d3.select("svg").append("circle").attr("cx", x).attr("cy", y).attr("r", "3").attr("fill", "black");
+        [x, y] = projection([116.3190488, 40.00355714]);
+        d3.select("svg").append("circle").attr("cx", x).attr("cy", y).attr("r", "3").attr("fill", "black");
+        [x, y] = projection([116.3299731, 39.99834189]);
+        d3.select("svg").append("circle").attr("cx", x).attr("cy", y).attr("r", "3").attr("fill", "black");
+        */
+        var i = 1;
+        var text;
+        d3.tsv("edum.tsv", function (pos) {
+            console.log(pos[0]);
+            d3.select("svg").selectAll("circle")
+                .data(pos)
+                .enter()
+                .append("circle")
+                .attr("cx", function (d) {
+                    [x, y] = projection([d.ClusteredLongtitude, d.ClusteredLatitude]);
+                    return x;
+                })
+                .attr("cy", function (d) {
+                    [x, y] = projection([d.ClusteredLongtitude, d.ClusteredLatitude]);
+                    return y;
+                })
+                .attr("r", function (d) {
+                    return Math.log(parseInt(d.Count0) + 2) * 5;
+                })
+                .attr("fill", "red");
+            d3.select("h3").text("Time: 5/16/2016 00:00:00");
+            d3.select("svg").on("click", function () {
+                d3.select("svg").selectAll("circle")
+                    .transition()
+                    .duration(2000)
+                    //.ease(d3.easeElastic)
+                    .attr("r", function (d) {
+                        return Math.log(parseInt(d["Count" + i]) + 2) * 5;
+                    })
+                time = "5/16/2016 ";
+                if (parseInt(i / 2) < 10)
+                    time = time + "0" + parseInt(i / 2) + ":";
+                else
+                    time = time + parseInt(i / 2) + ":";
+                if (i % 2)
+                    time = time + "30:00";
+                else
+                    time = time + "00:00";
+                d3.select("h3").text("Time: " + time);
+                i++;
+            });
+            /*
+            for (var i = 0; i < pos.length; i++)
+            {
+                [x, y] = projection([pos[i].Clusteredlongtitude, pos[i].Clusteredlatitude]);
+                r = Math.log(parseInt(pos[i].count) + 2) * 3;
+                d3.select("svg").append("circle").attr("cx", x).attr("cy", y).attr("r", r).attr("fill", "red");
+            }*/
+        });
+    </script>
+</body>
+</html>
